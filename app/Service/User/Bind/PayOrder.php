@@ -58,7 +58,11 @@ class PayOrder implements \App\Service\User\PayOrder
         }
 
         if ($payApi->pid > 0) {
-            return $this->getPay($payApi->pid);
+            $pay = $this->getPay($payApi->pid);
+            if ($pay->user_id === $payApi->user_id) {
+                throw new JSONException("检测到伪造支付");
+            }
+            return $pay;
         }
 
         return $payApi;

@@ -99,15 +99,20 @@ class PayManager extends Base
     ])]
     public function save(): Response
     {
-        $post = $this->request->post();
+        $data = $this->request->post();
+        $post = [];
 
-        if (isset($post['pid'])){
+        foreach ($data as $k => $v) {
+            $post[strtolower($k)] = $v;
+        }
+
+        if (isset($post['pid'])) {
             unset($post['api_fee']);
         }
 
         $save = new Save(Model::class);
         $save->enableCreateTime();
-        $save->setMap(map: $post, forbidden: ['scope', 'substation_status', 'substation_fee' , 'api_fee_status']);
+        $save->setMap(map: $post, forbidden: ['scope', 'substation_status', 'substation_fee', 'api_fee_status']);
         $save->addForceMap("user_id", $this->getUser()->id);
 
         if (isset($post['pid'])) {
