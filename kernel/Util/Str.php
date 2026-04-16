@@ -8,6 +8,25 @@ class Str
 {
 
     /**
+     * @param int $scale
+     * @param string|int|float ...$amount
+     * @return bool
+     */
+    public static function equalAmount(int $scale, string|int|float ...$amount): bool
+    {
+        if (count($amount) < 2) {
+            return true;
+        }
+
+        $normalized = array_map(
+            fn(string $item) => (new Decimal($item, $scale))->getAmount($scale),
+            $amount
+        );
+
+        return count(array_unique($normalized)) === 1;
+    }
+
+    /**
      * 生成密码
      * @param string $pass
      * @param string $salt

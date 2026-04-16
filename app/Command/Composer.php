@@ -21,7 +21,6 @@ class Composer extends Command
     public function require(string $package): void
     {
         Log::inst()->stdout("Composer is relying on {$package}, it may take a long time, please be patient..", Color::YELLOW, true);
-        \Kernel\Plugin\Composer::inst()->updatePackagist();
         Shell::inst()->exec("{$this->bin} composer require {$package} --no-interaction");
         Log::inst()->stdout("Composer dependencies completed.", Color::GREEN, true);
     }

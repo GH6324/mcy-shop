@@ -2,6 +2,7 @@
 declare (strict_types=1);
 
 use Kernel\Context\App;
+use Kernel\Plugin\Composer;
 use Kernel\Plugin\Const\Point;
 use Kernel\Plugin\Plugin;
 use Kernel\Plugin\Usr;
@@ -14,7 +15,7 @@ ini_set('memory_limit', '1G');
 date_default_timezone_set("Asia/Shanghai");
 
 //抑制错误
-//error_reporting(0);
+error_reporting(E_ALL & ~E_DEPRECATED);
 
 //const
 define("BASE_PATH", substr(rtrim(__DIR__, "/"), 0, -7) . "/");
@@ -38,6 +39,7 @@ App::$mode = (isset($argv[1]) && $argv[1] === "dev") ? "dev" : "service";
 App::$debug = App::$mode == "service" ? Config::get("app")['debug'] : true;
 
 /** @noinspection PhpUnhandledExceptionInspection */
+Composer::inst()->register();
 Plugin::instance()->hook(Usr::MAIN, Point::KERNEL_INIT_BEFORE);
 
 App::route();

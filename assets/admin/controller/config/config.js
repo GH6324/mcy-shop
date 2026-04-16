@@ -920,52 +920,6 @@ ${i18n(`<p>4.宝塔的nginx.conf：<b style="color: green;">/www/server/nginx/co
         });
     });
 
-    $('.composer-setting').click(() => {
-        getConfig("composer", config => {
-            component.popup({
-                submit: '/admin/config/save?key=composer',
-                tab: [
-                    {
-                        name: util.icon('icon-composerluojibianpai') + ' Composer',
-                        form: [
-                            {
-                                title: "服务器",
-                                name: "server",
-                                type: "radio",
-                                dict: [
-                                    {id: "official", name: "官方(境外)"},
-                                    {id: "aliyun", name: "阿里云"},
-                                    {id: "tencent", name: "腾讯云"},
-                                    {id: "huaweicloud", name: "华为云"},
-                                    {id: "custom", name: "自定义"},
-                                ],
-                                change: (form, val) => {
-                                    if (val == "custom") {
-                                        form.show("custom_url");
-                                    } else {
-                                        form.hide("custom_url");
-                                    }
-                                }
-                            },
-                            {
-                                title: "镜像地址",
-                                name: "custom_url",
-                                type: "input",
-                                placeholder: "自定义镜像地址",
-                                tips: "自定义镜像服务器地址，如：https://mirrors.aliyun.com/composer/",
-                                default: "https://mirrors.aliyun.com/composer/",
-                                hide: config?.server != "custom"
-                            }
-                        ]
-                    }
-                ],
-                assign: config,
-                autoPosition: true,
-                width: "600px"
-            });
-        });
-    });
-
 
     $('.withdraw-setting').click(() => {
         getConfig("withdraw", config => {

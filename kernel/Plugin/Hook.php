@@ -23,6 +23,7 @@ class Hook
      * @param string $env
      * @return void
      * @throws RuntimeException
+     * @throws \ReflectionException
      */
     public function del(string $name, string $env): void
     {
@@ -63,6 +64,9 @@ class Hook
 
             return Plugin::inst()->encrypt($hooks);
         });
+
+        //临时调用，等后期修正
+        Composer::inst()->uninstall($name, $env);
     }
 
     /**

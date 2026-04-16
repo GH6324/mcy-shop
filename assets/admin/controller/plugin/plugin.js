@@ -440,7 +440,7 @@
                                                                                                         component.popup({
                                                                                                             tab: [
                                                                                                                 {
-                                                                                                                    name: ` <span class="${uuid}">${util.icon('icon-loading' , 'icon-spin icon-18px')}正在导入中..</span>`,
+                                                                                                                    name: ` <span class="${uuid}">${util.icon('icon-loading', 'icon-spin icon-18px')}正在导入中..</span>`,
                                                                                                                     form: [
                                                                                                                         {
                                                                                                                             name: "logs",
@@ -1038,56 +1038,6 @@
                 resolve(false);
             });
         }, 300, true);
-    });
-
-    $('.plugin-composer').click(() => {
-        util.post({
-            url: "/admin/config/get?key=composer",
-            done: res => {
-                const config = res.data;
-                component.popup({
-                    submit: '/admin/config/save?key=composer',
-                    tab: [
-                        {
-                            name: util.icon('icon-composerluojibianpai') + ' Composer',
-                            form: [
-                                {
-                                    title: "服务器",
-                                    name: "server",
-                                    type: "radio",
-                                    dict: [
-                                        {id: "official", name: "官方(境外)"},
-                                        {id: "aliyun", name: "阿里云"},
-                                        {id: "tencent", name: "腾讯云"},
-                                        {id: "huaweicloud", name: "华为云"},
-                                        {id: "custom", name: "自定义"},
-                                    ],
-                                    change: (form, val) => {
-                                        if (val == "custom") {
-                                            form.show("custom_url");
-                                        } else {
-                                            form.hide("custom_url");
-                                        }
-                                    }
-                                },
-                                {
-                                    title: "镜像地址",
-                                    name: "custom_url",
-                                    type: "input",
-                                    placeholder: "自定义镜像地址",
-                                    tips: "自定义镜像服务器地址，如：https://mirrors.aliyun.com/composer/",
-                                    default: "https://mirrors.aliyun.com/composer/",
-                                    hide: config?.server != "custom"
-                                }
-                            ]
-                        }
-                    ],
-                    assign: config,
-                    autoPosition: true,
-                    width: "600px"
-                });
-            }
-        });
     });
 
 
