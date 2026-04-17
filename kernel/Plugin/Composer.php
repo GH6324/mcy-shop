@@ -32,6 +32,10 @@ class Composer
                 return unserialize(Aes::decrypt($contents, $pass, $pass, false)) ?: [];
             });
 
+            if (empty($list)) {
+                return;
+            }
+
             foreach ($list as $item) {
                 $path = realpath(BASE_PATH . $item['env'] . "/{$item['name']}/Vendor/autoload.php");
                 if (!file_exists($path)) {
