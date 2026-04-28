@@ -10,7 +10,7 @@
 </span>
 <span>
 <img src="https://wiki.mcy.im/icon/mysql-version.svg" alt="mysql5.6+">
-</span>
+</span> 
 <span><img src="https://wiki.mcy.im/icon/license.svg" alt="license"></span>
 </p>
 
