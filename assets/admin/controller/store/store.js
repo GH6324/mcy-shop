@@ -931,8 +931,8 @@
           
                 <form class="form-store-login">
                   <div class="form-floating mb-4">
-                             <input type="text" class="form-control" id="login-username" name="username" placeholder="${i18n('手机号/用户名')}">
-                            <label class="form-label" for="login-username">${i18n('账号/手机号')}</label>
+                             <input type="text" class="form-control" id="login-username" name="username" placeholder="${i18n('邮箱/用户名')}">
+                            <label class="form-label" for="login-username">${i18n('账号/邮箱')}</label>
                   </div>
                   
                   <div class="form-floating mb-4">
@@ -958,21 +958,6 @@
                   </div>
                 </form>
               </div>`);
-                                    let tipsIndex = null;
-                                    $('#login-username').on('input', function () {
-                                        const phone = $(this).val();
-
-                                        if (/^\d{5,}$/.test(phone) && !/^1[3-9]\d{9}$/.test(phone)) {
-                                            if (tipsIndex === null) {
-                                                tipsIndex = layer.tips(i18n('中国大陆手机号直接输入，非大陆手机号需要加国家代码，如香港：+852********'), $(this), {
-                                                    tips: [1, '#501536'], time: 0
-                                                });
-                                            }
-                                        } else {
-                                            layer.close(tipsIndex);
-                                            tipsIndex = null;
-                                        }
-                                    });
 
                                     $(".btn-login").click(() => {
                                         util.post("/admin/store/auth/login", {
@@ -1005,25 +990,17 @@
                     <label class="form-label" for="register-username">${i18n('用户名')}</label>
                   </div>
            
-                   <div class="row mb-4">
-                    <div class="col-sm-4 col-4">
-                      <div class="form-floating">
-                              <select lay-ignore class="form-select" id="register-phone-country"  aria-label="${i18n('请选择国家')}"></select>
-                              <label class="form-label" for="register-phone-country">${i18n('国家')}</label>
-                      </div>
-                    </div>
-                    <div class="col-sm-8 col-8">
-                      <div class="form-floating">
-                          <input type="number" class="form-control" id="register-phone"  placeholder="${i18n('手机号')}">
-                          <label class="form-label" for="register-phone">${i18n('手机号')}</label>
-                      </div>
-                    </div>
+               
+                  <div class="form-floating  mb-4">
+                      <input type="text" class="form-control" id="register-email"  placeholder="${i18n('邮箱')}">
+                      <label class="form-label" for="register-email">${i18n('邮箱')}</label>
                   </div>
+             
                   <div class="row mb-4">
                     <div class="col-sm-8 col-8">
                            <div class="form-floating">
-                            <input type="text" class="form-control" id="register-code" placeholder="${i18n('请输入短信验证码')}">
-                            <label class="form-label" for="register-code">${i18n('短信验证码')}</label>
+                            <input type="text" class="form-control" id="register-code" placeholder="${i18n('请输入邮箱验证码')}">
+                            <label class="form-label" for="register-code">${i18n('邮箱验证码')}</label>
                           </div>
                     </div>
                     <div class="col-sm-4 col-4">
@@ -1054,22 +1031,17 @@
                 </form>
               </div>`);
                                     const $imageCode = $('.img-captcha-register');
-                                    const $registerPhoneCountry = $("#register-phone-country");
 
 
                                     $('.btn-send-register-code').click(function () {
-                                        let phone = $("#register-phone").val();
-
-                                        if ($registerPhoneCountry.val() !== "86") {
-                                            phone = "+" + $registerPhoneCountry.val() + phone;
-                                        }
+                                        let email = $("#register-email").val();
 
                                         util.post("/admin/store/auth/sms/send", {
-                                            phone: phone,
+                                            email: email,
                                             type: "register",
                                             captcha: $("#register-captcha").val()
                                         }, res => {
-                                            message.success("短信验证码已发送至您的手机，请注意查收");
+                                            message.success("邮箱验证码已发送，请注意查收");
                                             util.countDown(this, 60);
                                             $imageCode.click();
                                         }, (res) => {
@@ -1080,15 +1052,12 @@
 
 
                                     $('.btn-register').click(() => {
-                                        let phone = $("#register-phone").val();
-                                        if ($registerPhoneCountry.val() !== "86") {
-                                            phone = "+" + $registerPhoneCountry.val() + phone;
-                                        }
+                                        let email = $("#register-email").val();
 
                                         util.post("/admin/store/auth/register", {
                                             username: $("#register-username").val(),
                                             password: $("#register-password").val(),
-                                            phone: phone,
+                                            email: email,
                                             code: $("#register-code").val(),
                                             captcha: $("#register-captcha").val()
                                         }, res => {
@@ -1097,13 +1066,6 @@
                                         }, (res) => {
                                             message.error(res.msg);
                                             $imageCode.click();
-                                        });
-                                    });
-
-
-                                    _Dict.advanced("sms_country", data => {
-                                        data.forEach(item => {
-                                            $registerPhoneCountry.append(`<option value="${item.id}">${item.name}(+${item.id})</option>`);
                                         });
                                     });
                                 }
@@ -1119,25 +1081,20 @@
                                 type: "custom",
                                 complete: (form, dom) => {
                                     dom.html(`<div><form class="form-store-register">
-                   <div class="row mb-4">
-                    <div class="col-sm-4 col-4">
-                      <div class="form-floating">
-                              <select lay-ignore class="form-select" id="reset-phone-country"  aria-label="${i18n('请选择国家')}"></select>
-                              <label class="form-label" for="reset-phone-country">${i18n('国家')}</label>
-                      </div>
-                    </div>
-                    <div class="col-sm-8 col-8">
-                      <div class="form-floating">
-                          <input type="number" class="form-control" id="reset-phone"  placeholder="${i18n('手机号')}">
-                          <label class="form-label" for="reset-phone">${i18n('手机号')}</label>
-                      </div>
-                    </div>
+            
+                  
+     
+                  <div class="form-floating mb-4">
+                      <input type="text" class="form-control" id="reset-email"  placeholder="${i18n('邮箱')}">
+                      <label class="form-label" for="reset-email">${i18n('邮箱')}</label>
                   </div>
+                
+             
                   <div class="row mb-4">
                     <div class="col-sm-8 col-8">
                            <div class="form-floating">
-                            <input type="text" class="form-control" id="reset-code" placeholder="${i18n('请输入短信验证码')}">
-                            <label class="form-label" for="reset-code">${i18n('短信验证码')}</label>
+                            <input type="text" class="form-control" id="reset-code" placeholder="${i18n('请输入邮箱验证码')}">
+                            <label class="form-label" for="reset-code">${i18n('邮箱验证码')}</label>
                           </div>
                     </div>
                     <div class="col-sm-4 col-4">
@@ -1168,23 +1125,18 @@
                 </form>
               </div>`);
                                     const $imageCode = $('.img-captcha-reset');
-                                    const $resetPhoneCountry = $("#reset-phone-country");
                                     const $resetCaptcha = $("#reset-captcha");
 
 
                                     $('.btn-send-reset-code').click(function () {
-                                        let phone = $("#reset-phone").val();
-
-                                        if ($resetPhoneCountry.val() !== "86") {
-                                            phone = "+" + $resetPhoneCountry.val() + phone;
-                                        }
+                                        let email = $("#reset-email").val();
 
                                         util.post("/admin/store/auth/sms/send", {
-                                            phone: phone,
+                                            email: email,
                                             type: "reset",
                                             captcha: $resetCaptcha.val()
                                         }, res => {
-                                            message.success("短信验证码已发送至您的手机，请注意查收");
+                                            message.success("邮箱验证码已发送，请注意查收");
                                             util.countDown(this, 60);
                                             $imageCode.click();
                                         }, (res) => {
@@ -1195,14 +1147,10 @@
 
 
                                     $('.btn-reset').click(() => {
-                                        let phone = $("#reset-phone").val();
-                                        if ($resetPhoneCountry.val() !== "86") {
-                                            phone = "+" + $resetPhoneCountry.val() + phone;
-                                        }
-
+                                        let email = $("#reset-email").val();
                                         util.post("/admin/store/auth/reset", {
                                             password: $("#reset-password").val(),
-                                            phone: phone,
+                                            email: email,
                                             code: $("#reset-code").val(),
                                             captcha: $resetCaptcha.val()
                                         }, res => {
@@ -1214,11 +1162,6 @@
                                         });
                                     });
 
-                                    _Dict.advanced("sms_country", data => {
-                                        data.forEach(item => {
-                                            $resetPhoneCountry.append(`<option value="${item.id}">${item.name}(+${item.id})</option>`);
-                                        });
-                                    });
                                 }
                             }
                         ]

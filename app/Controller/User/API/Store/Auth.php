@@ -58,11 +58,11 @@ class Auth extends Base
      * @throws \ReflectionException
      */
     #[Validator([
-        [\App\Validator\Store\Auth::class, ["registerUsername", "registerPassword", "code", "phone", "captcha"]]
+        [\App\Validator\Store\Auth::class, ["registerUsername", "registerPassword", "code", "email", "captcha"]]
     ])]
     public function register(): Response
     {
-        $login = $this->auth->register($this->request->post("username"), $this->request->post("password"), $this->request->post("phone"), $this->request->post("code"), $this->request->post("captcha"));
+        $login = $this->auth->register($this->request->post("username"), $this->request->post("password"), $this->request->post("email"), $this->request->post("code"), $this->request->post("captcha"));
         Plugin::inst()->setStoreUser($login->id, $login->key, $this->getUserPath());
         return $this->json();
     }
@@ -73,11 +73,11 @@ class Auth extends Base
      * @throws \ReflectionException
      */
     #[Validator([
-        [\App\Validator\Store\Auth::class, ["phone", "registerPassword", "code", "captcha"]]
+        [\App\Validator\Store\Auth::class, ["email", "registerPassword", "code", "captcha"]]
     ])]
     public function reset(): Response
     {
-        $login = $this->auth->reset($this->request->post("phone"), $this->request->post("password"), $this->request->post("code"), $this->request->post("captcha"));
+        $login = $this->auth->reset($this->request->post("email"), $this->request->post("password"), $this->request->post("code"), $this->request->post("captcha"));
         Plugin::inst()->setStoreUser($login->id, $login->key, $this->getUserPath());
         return $this->json();
     }
@@ -88,11 +88,11 @@ class Auth extends Base
      * @throws RuntimeException
      */
     #[Validator([
-        [\App\Validator\Store\Auth::class, ["sendSms", "type", "captcha"]]
+        [\App\Validator\Store\Auth::class, ["sendEmail", "type", "captcha"]]
     ])]
     public function sendSms(): Response
     {
-        $this->auth->sendSms(type: $this->request->post("type"), phone: $this->request->post("phone"), captcha: $this->request->post("captcha"));
+        $this->auth->sendEmail(type: $this->request->post("type"), email: $this->request->post("email"), captcha: $this->request->post("captcha"));
         return $this->json();
     }
 }

@@ -29,28 +29,28 @@ interface Auth
     /**
      * @param string $username
      * @param string $password
-     * @param string $phone
+     * @param string $email
      * @param string $code
      * @param string $captcha
      * @return Login
      */
-    public function register(string $username, string $password, string $phone, string $code, string $captcha): Login;
+    public function register(string $username, string $password, string $email, string $code, string $captcha): Login;
 
 
     /**
-     * @param string $phone
+     * @param string $email
      * @param string $password
      * @param string $code
      * @param string $captcha
      * @return Login
      */
-    public function reset(string $phone, string $password, string $code, string $captcha): Login;
+    public function reset(string $email, string $password, string $code, string $captcha): Login;
 
     /**
      * @param string $type
-     * @param string $phone
+     * @param string $email
      * @param string $captcha
      * @return void
      */
-    public function sendSms(string $type, string $phone, string $captcha): void;
+    public function sendEmail(string $type, string $email, string $captcha): void;
 }

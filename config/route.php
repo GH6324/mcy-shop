@@ -261,7 +261,7 @@ Route::add("/admin/store/auth/captcha", [\App\Controller\Admin\API\Store\Auth::c
 Route::add("/admin/store/auth/login", [\App\Controller\Admin\API\Store\Auth::class, "login"], "POST");
 Route::add("/admin/store/auth/register", [\App\Controller\Admin\API\Store\Auth::class, "register"], "POST");
 Route::add("/admin/store/auth/reset", [\App\Controller\Admin\API\Store\Auth::class, "reset"], "POST");
-Route::add("/admin/store/auth/sms/send", [\App\Controller\Admin\API\Store\Auth::class, "sendSms"], "POST");
+Route::add("/admin/store/auth/sms/send", [\App\Controller\Admin\API\Store\Auth::class, "sendEmail"], "POST");
 
 
 //应用商店-----------------END---------------------

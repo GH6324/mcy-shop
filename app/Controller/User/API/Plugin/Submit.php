@@ -27,6 +27,7 @@ class Submit extends Base
      * @return Response
      * @throws JSONException
      * @throws RuntimeException
+     * @throws \ReflectionException
      */
     #[Validator([
         [\App\Validator\Admin\Submit::class, ["name", "js"]]
@@ -36,10 +37,29 @@ class Submit extends Base
         $plugin = Plugin::instance()->getPlugin($name, Usr::inst()->userToEnv($this->getUser()->id));
 
         if (!$plugin) {
-            throw new JSONException("插件不存在");
+            throw new JSONException('插件不存在');
         }
 
-        $path = $plugin->path . "/Config/Js/" . $js . ".js";
-        return $this->json(200, "success", ["code" => File::read($path)]);
+        if (!preg_match('/^[A-Za-z0-9_.-]+$/', $js)) {
+            throw new JSONException('非法的JS文件名');
+        }
+
+        $baseDir = $plugin->path . '/Config/Js';
+        $baseRealPath = realpath($baseDir);
+
+        if ($baseRealPath === false || !is_dir($baseRealPath)) {
+            throw new JSONException('JS目录不存在');
+        }
+
+        $path = $baseRealPath . DIRECTORY_SEPARATOR . $js . '.js';
+        $realPath = realpath($path);
+
+        if ($realPath === false || !is_file($realPath) || strncmp($realPath, $baseRealPath . DIRECTORY_SEPARATOR, strlen($baseRealPath . DIRECTORY_SEPARATOR)) !== 0) {
+            throw new JSONException('JS文件不存在');
+        }
+
+        return $this->json(200, 'success', [
+            'code' => File::read($realPath)
+        ]);
     }
 }

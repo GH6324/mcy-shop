@@ -57,6 +57,16 @@ class Auth
         return true;
     }
 
+    #[Name("email")]
+    #[Required("邮箱不能为空")]
+    public function email(string $value): bool|string
+    {
+        if (!Verify::isEmail($value)) {
+            return "邮箱格式错误";
+        }
+        return true;
+    }
+
 
     #[Required("图形验证码不能为空")]
     #[Regex("/^.{4}$/", "图形验证码错误")]
@@ -72,6 +82,16 @@ class Auth
     {
         if (!Verify::isChinaMobile($value) && !Verify::isInternationalMobile($value)) {
             return "手机号格式错误";
+        }
+        return true;
+    }
+
+    #[Name("email")]
+    #[Required("邮箱不能为空")]
+    public function sendEmail(string $value): bool|string
+    {
+        if (!Verify::isEmail($value)) {
+            return "邮箱格式错误";
         }
         return true;
     }

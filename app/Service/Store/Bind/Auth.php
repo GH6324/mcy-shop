@@ -55,19 +55,19 @@ class Auth implements \App\Service\Store\Auth
     /**
      * @param string $username
      * @param string $password
-     * @param string $phone
+     * @param string $email
      * @param string $code
      * @param string $captcha
      * @return Login
      * @throws ServiceException
      */
-    public function register(string $username, string $password, string $phone, string $code, string $captcha): Login
+    public function register(string $username, string $password, string $email, string $code, string $captcha): Login
     {
         $http = $this->http->request("/auth/register",
             [
                 "username" => $username,
                 "password" => $password,
-                "phone" => $phone,
+                "email" => $email,
                 "code" => $code,
                 "captcha" => $captcha
             ]
@@ -83,33 +83,33 @@ class Auth implements \App\Service\Store\Auth
 
     /**
      * @param string $type
-     * @param string $phone
+     * @param string $email
      * @param string $captcha
      * @return void
      * @throws ServiceException
      */
-    public function sendSms(string $type, string $phone, string $captcha): void
+    public function sendEmail(string $type, string $email, string $captcha): void
     {
-        $http = $this->http->request("/auth/phone/code?type={$type}", ["captcha" => $captcha, "phone" => $phone]);
+        $http = $this->http->request("/auth/email/code?type={$type}", ["captcha" => $captcha, "email" => $email]);
         if ($http->code != 200) {
             throw new ServiceException($http->message);
         }
     }
 
     /**
-     * @param string $phone
+     * @param string $email
      * @param string $password
      * @param string $code
      * @param string $captcha
      * @return Login
      * @throws ServiceException
      */
-    public function reset(string $phone, string $password, string $code, string $captcha): Login
+    public function reset(string $email, string $password, string $code, string $captcha): Login
     {
         $http = $this->http->request("/auth/reset",
             [
                 "password" => $password,
-                "phone" => $phone,
+                "email" => $email,
                 "code" => $code,
                 "captcha" => $captcha
             ]
