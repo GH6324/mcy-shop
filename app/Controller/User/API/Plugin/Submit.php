@@ -48,18 +48,16 @@ class Submit extends Base
         $baseRealPath = realpath($baseDir);
 
         if ($baseRealPath === false || !is_dir($baseRealPath)) {
-            throw new JSONException('JS目录不存在');
+            return $this->json(data: ['code' => ""]);
         }
 
         $path = $baseRealPath . DIRECTORY_SEPARATOR . $js . '.js';
         $realPath = realpath($path);
 
         if ($realPath === false || !is_file($realPath) || strncmp($realPath, $baseRealPath . DIRECTORY_SEPARATOR, strlen($baseRealPath . DIRECTORY_SEPARATOR)) !== 0) {
-            throw new JSONException('JS文件不存在');
+            return $this->json(data: ['code' => ""]);
         }
 
-        return $this->json(200, 'success', [
-            'code' => File::read($realPath)
-        ]);
+        return $this->json(data: ['code' => File::read($realPath)]);
     }
 }
