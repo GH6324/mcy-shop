@@ -10,7 +10,7 @@
 </span>
 <span>
 <img src="https://wiki.mcy.im/icon/mysql-version.svg" alt="mysql5.6+">
-</span> 
+</span>
 <span><img src="https://wiki.mcy.im/icon/license.svg" alt="license"></span>
 </p>
 
@@ -20,6 +20,10 @@
 > 用户在使用或学习本程序时，必须严格遵守法律法规。我们提倡依法行事，尊重法律，坚守法律，避免对社会产生不良影响。
 >
 > 使用本程序即表示您已充分理解并同意本法律声明的所有内容。
+
+## 广告
+
+🚀 ARM AI — GPT / Claude / Gemini / Grok Token 服务平台，超低倍率、余额长期有效并支持无理由退款。立即体验：https://ai.arm.moe/
 
 ## 安装文档
 - 官方文档：[https://wiki.mcy.im](https://wiki.mcy.im)
