@@ -24,7 +24,13 @@ class Response implements \Kernel\Context\Interface\Response
      */
     public function withCookie(string $key, string $value, int $expire): static
     {
-        setcookie($key, $value, time() + $expire, "/");
+        //与 CLI 环境保持一致：启用 HttpOnly + SameSite=Lax，缓解 XSS 窃取令牌与 CSRF。
+        setcookie($key, $value, [
+            'expires' => time() + $expire,
+            'path' => '/',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         return $this;
     }
 

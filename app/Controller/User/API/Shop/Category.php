@@ -65,6 +65,7 @@ class Category extends Base
         $save->enableCreateTime();
         $save->setMap($this->request->post(flags: Filter::NORMAL));
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：只能修改自己的分类（防跨租户接管）
         $save->setAddWhitelist(...$whitelist);
         $save->setModifiableWhitelist(...$whitelist);
 

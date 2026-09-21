@@ -158,6 +158,11 @@ class Security extends Base
             throw new RuntimeException("已经提交过实名认证");
         }
 
+        //同一证件号不允许被多个账号使用，杜绝一证多开/伪造实名绕过风控
+        if (UserIdentity::query()->where("id_card", $this->request->post("id_card"))->exists()) {
+            throw new RuntimeException("该证件号已被使用");
+        }
+
         $config = $this->config->getMainConfig("register");
         $userIdentity = new UserIdentity();
         $userIdentity->user_id = $this->getUser()->id;

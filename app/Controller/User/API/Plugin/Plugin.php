@@ -31,6 +31,20 @@ class Plugin extends Base
     }
 
     /**
+     * 校验插件名称：只允许字母、数字、下划线（单路径段），杜绝 ../、%2f 等目录穿越
+     * 读写/执行站点内任意插件目录或文件。
+     * @param string $name
+     * @return void
+     * @throws JSONException
+     */
+    private function assertPluginName(string $name): void
+    {
+        if ($name === "" || !preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+            throw new JSONException("非法的插件名称");
+        }
+    }
+
+    /**
      * @return Response
      * @throws RuntimeException
      * @throws \ReflectionException
@@ -56,6 +70,7 @@ class Plugin extends Base
     public function getLogs(string $hash): Response
     {
         $name = $this->request->post("name");
+        $this->assertPluginName((string)$name);
         $data = \Kernel\Plugin\Plugin::instance()->getLogs($hash, $name, $this->getEnv())->toArray();
         return $this->json(data: $data);
     }
@@ -69,9 +84,12 @@ class Plugin extends Base
      */
     public function icon(string $name): Response
     {
+        $this->assertPluginName($name);
+        $base = realpath(BASE_PATH . $this->getEnv());
         $path = realpath(BASE_PATH . $this->getEnv() . "/" . $name . "/Icon.ico");
 
-        if (!$path) {
+        //真实路径必须位于当前用户的插件根目录内，二次防御目录穿越
+        if (!$path || $base === false || !str_starts_with($path, $base . DIRECTORY_SEPARATOR)) {
             throw new JSONException("ICON不存在");
         }
         $file = fopen($path, 'rb');
@@ -97,6 +115,7 @@ class Plugin extends Base
     public function clearLog(): Response
     {
         $name = $this->request->post("name");
+        $this->assertPluginName((string)$name);
         \Kernel\Plugin\Plugin::instance()->clearLog($name, $this->getEnv());
         return $this->json();
     }
@@ -110,6 +129,7 @@ class Plugin extends Base
      */
     public function setCfg(string $name): Response
     {
+        $this->assertPluginName($name);
         $post = $this->request->post(flags: Filter::NORMAL);
         \Kernel\Plugin\Plugin::inst()->instantHook($name, $this->getEnv(), Point::APP_SAVE_CFG_BEFORE, $post);
         \Kernel\Plugin\Plugin::instance()->setConfig($name, $this->getEnv(), $post);
@@ -125,6 +145,7 @@ class Plugin extends Base
      */
     public function setSysCfg(string $name): Response
     {
+        $this->assertPluginName($name);
         \Kernel\Plugin\Plugin::instance()->setSystemConfig($name, $this->getEnv(), $this->request->post());
         return $this->json();
     }
@@ -140,6 +161,7 @@ class Plugin extends Base
     public function start(): Response
     {
         $name = $this->request->post("name");
+        $this->assertPluginName((string)$name);
         \Kernel\Plugin\Plugin::instance()->start($name, $this->getEnv());
         return $this->json();
     }
@@ -154,6 +176,7 @@ class Plugin extends Base
     public function stop(): Response
     {
         $name = $this->request->post("name");
+        $this->assertPluginName((string)$name);
         \Kernel\Plugin\Plugin::instance()->stop($name, $this->getEnv());
         return $this->json();
     }
@@ -169,6 +192,7 @@ class Plugin extends Base
     public function restart(): Response
     {
         $name = $this->request->post("name");
+        $this->assertPluginName((string)$name);
         \Kernel\Plugin\Plugin::instance()->stop($name, $this->getEnv());
         \Kernel\Plugin\Plugin::instance()->start($name, $this->getEnv());
         return $this->json();

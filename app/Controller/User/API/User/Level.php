@@ -67,6 +67,7 @@ class Level extends Base
         $save->setMap($map, ["icon", "name", "upgrade_price", "sort", "is_upgradable"]);
         $save->addForceMap("upgrade_requirements", json_encode($this->getUpgradeRequirements($map)));
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：仅允许修改属于自己的记录
         $privilegeIntroduce && $save->addForceMap("privilege_introduce", $privilegeIntroduce);
         $privilegeContent && $save->addForceMap("privilege_content", $privilegeContent);
         if (isset($map['sort']) && $map['sort'] === "") {

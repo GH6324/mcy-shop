@@ -346,7 +346,7 @@ class Order implements \App\Service\User\Order
      * @throws \Exception
      */
     public
-    function cancel(string $tradeNo): bool
+    function cancel(string $tradeNo, ?User $customer, string $clientId): bool
     {
         $order = \App\Model\Order::query()->where("trade_no", $tradeNo)->first();
         if (!$order) {
@@ -355,6 +355,14 @@ class Order implements \App\Service\User\Order
         if ($order->status != 0) {
             return false;
         }
+
+        //归属校验：登录用户按 customer_id，游客按 client_id，杜绝匿名/越权删除他人未支付订单
+        $ownByUser = $customer && (int)$order->customer_id === (int)$customer->id;
+        $ownByClient = !empty($order->client_id) && $clientId !== "" && (string)$order->client_id === $clientId;
+        if (!$ownByUser && !$ownByClient) {
+            return false;
+        }
+
         //$order->status = 2;
         $order->delete();
         return true;

@@ -33,6 +33,32 @@ class Order extends Base
     protected \App\Service\User\Order $order;
 
     /**
+     * 订单归属校验：登录用户按 customer_id，游客按 client_id。
+     * 用于杜绝凭高熵但会随分享链接/历史/日志泄漏的 trade_no 越权读取他人订单与卡密。
+     * @param string $tradeNo
+     * @return void
+     * @throws JSONException
+     */
+    private function assertOrderOwnership(string $tradeNo): void
+    {
+        /**
+         * @var \App\Model\Order $order
+         */
+        $order = \App\Model\Order::query()->where("trade_no", $tradeNo)->first();
+        if (!$order) {
+            throw new JSONException("订单不存在");
+        }
+
+        $customer = $this->getUser();
+        $clientId = (string)$this->request->cookie("client_id");
+        $ownByUser = $customer && (int)$order->customer_id === (int)$customer->id;
+        $ownByClient = !empty($order->client_id) && $clientId !== "" && (string)$order->client_id === $clientId;
+        if (!$ownByUser && !$ownByClient) {
+            throw new JSONException("订单不存在");
+        }
+    }
+
+    /**
      * @return Response
      * @throws NotFoundException
      * @throws RuntimeException
@@ -64,7 +90,7 @@ class Order extends Base
     public function cancel(): Response
     {
         $tradeNo = $this->request->post("trade_no");
-        $this->order->cancel($tradeNo);
+        $this->order->cancel($tradeNo, $this->getUser(), (string)$this->request->cookie("client_id"));
         return $this->json();
     }
 
@@ -79,6 +105,7 @@ class Order extends Base
     public function getOrder(): Response
     {
         $tradeNo = $this->request->post("trade_no");
+        $this->assertOrderOwnership($tradeNo); //归属校验：杜绝凭 trade_no + 自增 item_id 越权读取他人订单（含卡密）
         $itemId = $this->request->post("item_id", Filter::INTEGER);
 
         $order = OrderItem::query()
@@ -108,6 +135,7 @@ class Order extends Base
     ], Method::GET)]
     public function downloadOrder(int $itemId, string $tradeNo): Response
     {
+        $this->assertOrderOwnership($tradeNo); //归属校验：杜绝匿名 GET 下载他人已发货卡密原文
         /**
          * @var OrderItem $order
          */

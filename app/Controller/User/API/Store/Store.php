@@ -106,6 +106,9 @@ class Store extends Base
      * @throws RuntimeException
      * @throws \ReflectionException
      */
+    #[Validator([
+        [Install::class, "key"]
+    ])]
     public function getPluginVersionList(): Response
     {
         $list = $this->store->getPluginVersionList((string)$this->request->post("key"), $this->getStoreAuth());
@@ -118,6 +121,9 @@ class Store extends Base
      * @throws RuntimeException
      * @throws \ReflectionException
      */
+    #[Validator([
+        [Install::class, "key"]
+    ])]
     public function pluginUpdate(): Response
     {
         $this->store->pluginVersionUpdate((string)$this->request->post("key"), $this->getUserPath(), $this->getStoreAuth());

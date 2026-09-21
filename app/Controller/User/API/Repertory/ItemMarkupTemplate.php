@@ -73,6 +73,7 @@ class ItemMarkupTemplate extends Base
         $save->enableCreateTime();
         $save->setMap($map);
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：仅允许修改属于自己的记录
         try {
             /**
              * @var Model $origin

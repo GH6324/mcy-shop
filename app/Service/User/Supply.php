@@ -16,5 +16,5 @@ interface Supply
      * @param int $itemId
      * @return RepertoryItem
      */
-    public function getItem(?User $customer, int $itemId): RepertoryItem;
+    public function getItem(?User $customer, int $itemId, string $apiCode = ""): RepertoryItem;
 }

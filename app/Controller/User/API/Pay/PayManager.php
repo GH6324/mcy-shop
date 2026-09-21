@@ -114,6 +114,7 @@ class PayManager extends Base
         $save->enableCreateTime();
         $save->setMap(map: $post, forbidden: ['scope', 'substation_status', 'substation_fee', 'api_fee_status']);
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：只能修改自己的支付通道（防大小写绕过越权）
 
         if (isset($post['pid'])) {
             /**

@@ -89,6 +89,28 @@ const util = new class Util {
     }
 
     /**
+     * 安全跳转：仅允许站内相对路径，杜绝开放重定向（//evil.com、https://evil.com 等）
+     * @param raw 原始 goto 参数（可能为 null / URL 编码）
+     * @returns {string}
+     */
+    safeGoto(raw) {
+        if (raw === null || raw === undefined || raw === "") {
+            return "/";
+        }
+        let url;
+        try {
+            url = decodeURIComponent(raw);
+        } catch (e) {
+            return "/";
+        }
+        // 必须以单个 "/" 开头，且第二个字符不能是 "/" 或 "\"（防协议相对跳转），且不含协议
+        if (url.charAt(0) !== "/" || url.charAt(1) === "/" || url.charAt(1) === "\\" || url.indexOf("://") !== -1) {
+            return "/";
+        }
+        return url;
+    }
+
+    /**
      * POST
      * @param url
      * @param data

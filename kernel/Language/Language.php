@@ -156,6 +156,10 @@ class Language
     public function createLanguagePack(string $language, string $text, string $translateText): void
     {
         $language = strtolower($language);
+        //语言代码白名单，杜绝路径穿越写入
+        if (!preg_match('/^[a-z0-9_-]{1,32}$/', $language)) {
+            throw new RuntimeException("非法的语言代码");
+        }
         $languagePack = $this->languagePackPath . "/{$language}.json";
         $this->recordSource($text);
         File::writeForLock($languagePack, function (string $contents) use ($translateText, $text) {
@@ -314,6 +318,11 @@ class Language
     {
         $language = strtolower($language);
 
+        //语言代码白名单，杜绝路径穿越
+        if (!preg_match('/^[a-z0-9_-]{1,32}$/', $language)) {
+            return [];
+        }
+
         if ($language == Const\Language::ZH_CN) {
             return [];
         }
@@ -339,6 +348,10 @@ class Language
     public function getHash(string $language, string $basePath = BASE_PATH . "/config/language"): string
     {
         $language = strtolower($language);
+        //语言代码白名单，杜绝路径穿越
+        if (!preg_match('/^[a-z0-9_-]{1,32}$/', $language)) {
+            return md5("none");
+        }
         $preferredPack = "{$basePath}/{$language}.json";
         if (!is_file($preferredPack)) {
             return md5("none");

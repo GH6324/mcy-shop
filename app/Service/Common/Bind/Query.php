@@ -19,6 +19,13 @@ use Kernel\Util\Date;
 class Query implements \App\Service\Common\Query
 {
 
+    /**
+     * 禁止作为查询条件（WHERE）的敏感列。
+     * user/manage 表的 password 同时是 JWT(HS256) 签名密钥、salt 为加盐材料，
+     * 若允许作为过滤列，攻击者可通过 total 计数做条件盲注逐字符提取哈希 → 伪造令牌。
+     */
+    private const SENSITIVE_COLUMNS = ['password', 'salt'];
+
 
     /**
      * @param string $model
@@ -99,6 +106,16 @@ class Query implements \App\Service\Common\Query
             $type = $args[0];
             $column = $args[1];
 
+            // 列名只允许字母、数字、下划线，防止列名注入与基于 SQL 报错的探测
+            if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$column)) {
+                continue;
+            }
+
+            // 敏感列禁止作为查询条件，杜绝条件盲注提取 password/salt（= JWT 签名密钥）
+            if (in_array(strtolower((string)$column), self::SENSITIVE_COLUMNS, true)) {
+                throw new JSONException("非法的查询条件");
+            }
+
             foreach ($get->leftJoinWhere as $jn) {
                 $relatedTableName = $this->getTable($jn['related']);
                 foreach ($jn['columns'] as $k => $v) {
@@ -155,8 +172,18 @@ class Query implements \App\Service\Common\Query
          */
         $query = $save->model::query();
 
+        // 附加归属/作用域约束（如 user_id = 当前用户），杜绝按裸 id 跨租户接管
+        foreach ($save->where as $where) {
+            $query = $query->where($where[0], $where[1]);
+        }
+
         $model = $save->id ? $query->find($save->id) : null;
         $modify = false;
+
+        // 客户端提供了 id 且设置了归属约束，却查不到记录：视为无权修改，拒绝并且不静默新增
+        if ($save->id && !$model && count($save->where) > 0) {
+            throw new RuntimeException("数据不存在或无权修改");
+        }
 
         if (!$model) {
             if (!$save->isAddable) {

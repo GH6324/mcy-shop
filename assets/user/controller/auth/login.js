@@ -7,7 +7,7 @@
             _this.attr("disabled", true);
             message.success("登录成功，正在跳转..");
             localStorage.setItem("user_token", res.data.token);
-            window.location.href = util.getParam("goto") !== null ? decodeURIComponent(util.getParam("goto")) : "/";
+            window.location.href = util.safeGoto(util.getParam("goto"));
         })
     });
 

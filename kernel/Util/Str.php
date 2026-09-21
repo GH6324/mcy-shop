@@ -44,9 +44,21 @@ class Str
      */
     public static function generateRandStr(int $length = 32): string
     {
-        mt_srand();
-        $md5 = md5(uniqid(md5((string)time())) . mt_rand(10000, 9999999));
-        return substr($md5, 0, $length);
+        //使用 CSPRNG 生成随机十六进制串（供会话ID、client_id、app_key、API Secret 等使用），
+        //替代原 md5(uniqid()+mt_rand()) 的可预测实现，防止会话ID/令牌被预测。
+        if ($length < 1) {
+            $length = 1;
+        }
+        try {
+            $hex = bin2hex(random_bytes((int)ceil($length / 2)));
+        } catch (\Throwable $e) {
+            //极端情况下的兜底（正常不会触发）
+            $hex = md5(uniqid((string)mt_rand(), true) . random_int(PHP_INT_MIN, PHP_INT_MAX));
+            while (strlen($hex) < $length) {
+                $hex .= md5($hex . microtime());
+            }
+        }
+        return substr($hex, 0, $length);
     }
 
     /**

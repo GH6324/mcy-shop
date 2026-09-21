@@ -47,6 +47,12 @@ class OpenMerchant implements \App\Service\User\OpenMerchant
             throw new JSONException("该用户组不存在");
         }
 
+        //归属/门禁校验：只允许开通管理员标记为“可自助升级”的用户组，
+        //杜绝任意用户凭 group_id 免费开通商家/供货商身份（绕过 Merchant/Supplier 门禁）。
+        if ($group->is_upgradable != 1) {
+            throw new JSONException("该用户组不支持自助开通");
+        }
+
         if ($group->price == 0) {
             $this->become($user->id, $groupId, false);
             return (new Trade())->setIsFree(true);

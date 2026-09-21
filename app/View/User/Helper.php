@@ -184,12 +184,16 @@ class Helper extends AbstractExtension
     {
         $html = ' <ul class="nav-main-submenu"> ';
         foreach ($category as $cate) {
+            //对来自数据库、可由商家控制的 icon(属性上下文) 与 name(文本上下文) 做 HTML 转义，
+            //杜绝引号闭合式属性注入导致的存储型 XSS。
+            $icon = htmlspecialchars((string)($cate['icon'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $name = htmlspecialchars((string)($cate['name'] ?? ''), ENT_QUOTES, 'UTF-8');
             if (isset($cate['children']) && is_array($cate['children']) && count($cate['children']) > 0) {
-                $html .= sprintf('<li class="nav-main-item" ><a class="nav-main-link nav-main-link-submenu" data-toggle = "submenu" aria-haspopup = "true" aria-expanded = "false" href = "#" ><img src = "%s" class="category-icon" ><span class="nav-main-link-name" >%s(%d)</span > </a > ', $cate['icon'], $cate['name'], $cate['item_count']);
+                $html .= sprintf('<li class="nav-main-item" ><a class="nav-main-link nav-main-link-submenu" data-toggle = "submenu" aria-haspopup = "true" aria-expanded = "false" href = "#" ><img src = "%s" class="category-icon" ><span class="nav-main-link-name" >%s(%d)</span > </a > ', $icon, $name, $cate['item_count']);
                 $html .= $this->getCatHtml($cate['children']);
                 $html .= ' </li > ';
             } else {
-                $html .= sprintf('<li class="nav-main-item" ><a class="nav-main-link" href = "/?cid=%d" ><img src = "%s" class="category-icon" ><span class="nav-main-link-name" >%s(%d)</span ></a > </li > ', $cate['id'], $cate['icon'], $cate['name'], $cate['item_count']);
+                $html .= sprintf('<li class="nav-main-item" ><a class="nav-main-link" href = "/?cid=%d" ><img src = "%s" class="category-icon" ><span class="nav-main-link-name" >%s(%d)</span ></a > </li > ', $cate['id'], $icon, $name, $cate['item_count']);
             }
         }
         $html .= ' </ul> ';

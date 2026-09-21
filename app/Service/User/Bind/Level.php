@@ -96,6 +96,16 @@ class Level implements \App\Service\User\Level
             throw new JSONException("该用户组不存在");
         }
 
+        //门禁校验：等级必须被标记为可升级，且必须归属本站商家（pid>0）或平台（user_id 为空），
+        //杜绝跨商家/越权购买他人等级。
+        if ($level->is_upgradable != 1) {
+            throw new JSONException("该等级不支持升级");
+        }
+        $expectOwner = $user->pid > 0 ? $user->pid : null;
+        if ($level->user_id !== $expectOwner) {
+            throw new JSONException("该用户组不存在");
+        }
+
         if ($level->upgrade_price == 0) {
             throw new JSONException("该用户组无法通过付费升级");
         }

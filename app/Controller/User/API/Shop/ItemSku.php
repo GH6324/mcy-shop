@@ -97,6 +97,7 @@ class ItemSku extends Base
         $save->disableAddable();
         $save->setMap($map, ["name", "picture_thumb_url", "picture_url", "price", "sort", "private_display", "dividend_amount"]);
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：仅允许修改属于自己的记录
         try {
             $this->query->save($save);
         } catch (\Exception $exception) {

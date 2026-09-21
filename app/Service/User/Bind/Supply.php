@@ -31,7 +31,7 @@ class Supply implements \App\Service\User\Supply
      * @return \App\Entity\Repertory\RepertoryItem
      * @throws JSONException
      */
-    public function getItem(?User $customer, int $itemId): \App\Entity\Repertory\RepertoryItem
+    public function getItem(?User $customer, int $itemId, string $apiCode = ""): \App\Entity\Repertory\RepertoryItem
     {
         /**
          * @var RepertoryItem $item
@@ -47,6 +47,9 @@ class Supply implements \App\Service\User\Supply
         if ($item->status != 2) {
             throw new JSONException("商品不可用#0");
         }
+
+        //可见性门禁在控制器层统一执行（见 App\Controller\User\API\Shop\Supply::assertSupplyAccess），
+        //兼顾“凭 api_code 列表授权后再查看/进货/导入”的既有交互，同时杜绝凭 id 直接访问隐藏货源。
 
         $repertoryItem = new \App\Entity\Repertory\RepertoryItem($item);
         $repertoryItem->setWidget(json_decode($item->widget, true));

@@ -184,6 +184,8 @@ class Item extends Base
         }
 
         $save->addForceMap("user_id", $this->getUser()->id);
+
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：仅允许修改属于自己的记录
         $save->setMap(map: $map, forbidden: ["user_id", "status", "sort", "create_time"]);
 
         try {

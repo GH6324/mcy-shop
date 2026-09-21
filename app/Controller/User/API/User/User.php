@@ -80,6 +80,16 @@ class User extends Base
         $id = $this->request->post('id', Filter::INTEGER);
         $amount = $this->request->post('amount');
 
+        //禁止向自己转账（否则净额不变却虚增自己的累计充值 total_recharge_amount）
+        if ($id <= 0 || $id === $this->getUser()->id) {
+            throw new \Kernel\Exception\JSONException("转账对象不存在");
+        }
+
+        //金额格式与正数校验
+        if (!preg_match('/^[0-9]+(\.[0-9]{1,2})?$/', (string)$amount) || (float)$amount <= 0) {
+            throw new \Kernel\Exception\JSONException("转账金额错误");
+        }
+
         //转账操作
         Db::transaction(function () use ($amount, $id) {
             $this->balance->transfer($this->getUser()->id, $id, $amount);

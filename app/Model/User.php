@@ -34,6 +34,14 @@ class User extends Model
     protected ?string $table = "user";
 
     /**
+     * 序列化时隐藏的敏感字段。
+     * password 同时是 JWT(HS256) 的签名密钥（见 App\Interceptor\User），salt 为加盐材料，
+     * 二者一旦随接口/日志泄漏即可离线破解或伪造令牌，必须永不出现在任何 toArray()/toJson() 输出中。
+     * @var array
+     */
+    protected array $hidden = ['password', 'salt'];
+
+    /**
      * @var bool
      */
     public bool $timestamps = false;

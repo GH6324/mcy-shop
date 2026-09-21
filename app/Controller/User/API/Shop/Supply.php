@@ -24,6 +24,7 @@ use Kernel\Annotation\Inject;
 use Kernel\Annotation\Interceptor;
 use Kernel\Annotation\Validator;
 use Kernel\Context\Interface\Response;
+use Kernel\Exception\JSONException;
 use Kernel\Exception\RuntimeException;
 use Kernel\Util\Str;
 use Kernel\Validator\Method;
@@ -125,7 +126,76 @@ class Supply extends Base
 
         $arr['data'] = array_values($arr['data']);
 
+        //记录本次列表(已通过公开/对接码校验)可见的货源 id 到会话，作为后续 查看/进货/导入 的授权凭据，
+        //从而在不改变既有交互(查看/下单不再重复携带对接码)的前提下，杜绝凭 id 直接访问隐藏货源。
+        $this->grantSupplyAccess(array_map(fn($r) => (int)($r['id'] ?? 0), $arr['data']));
+
         return $this->json(data: ["list" => $arr['data'], "total" => $arr['total']]);
+    }
+
+    /**
+     * 将可见货源 id 合并进会话授权集合（去重、限量）
+     * @param array $ids
+     * @return void
+     */
+    private function grantSupplyAccess(array $ids): void
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (empty($ids)) {
+            return;
+        }
+        $grant = array_map('intval', (array)$this->session->get("supply_grant"));
+        $grant = array_values(array_unique(array_merge($grant, $ids)));
+        //限量，避免会话无限增长
+        if (count($grant) > 3000) {
+            $grant = array_slice($grant, -3000);
+        }
+        $this->session->set("supply_grant", $grant);
+    }
+
+    /**
+     * 货源访问门禁：公开(privacy=2) / 本人所有 / 会话已授权 / 直接携带匹配对接码 之一方可访问。
+     * 用于 查看详情、进货、导入 三处，防止任意商家凭 id 读取/导入/转卖隐藏货源。
+     * @param int $itemId
+     * @return void
+     * @throws JSONException
+     */
+    private function assertSupplyAccess(int $itemId): void
+    {
+        /**
+         * @var RepertoryItem $item
+         */
+        $item = RepertoryItem::query()->find($itemId, ["id", "user_id", "privacy", "api_code", "status"]);
+        if (!$item || $item->status != 2) {
+            throw new JSONException("商品不可用");
+        }
+        //公开货源
+        if ($item->privacy == 2) {
+            return;
+        }
+        //本人货源
+        if ((int)$item->user_id === (int)$this->getUser()->id) {
+            return;
+        }
+        //会话授权集合（此前通过对接码列表获得）
+        $grant = array_map('intval', (array)$this->session->get("supply_grant"));
+        if (in_array((int)$item->id, $grant, true)) {
+            return;
+        }
+        //直接携带匹配的对接码（5位=货源码/privacy=1；6位=供货商码/privacy!=0）
+        $apiCode = trim((string)($this->request->post("api_code") ?: $this->request->get("api_code")));
+        if ($apiCode !== "") {
+            if (strlen($apiCode) === 5 && $item->privacy == 1 && (string)$item->api_code === $apiCode) {
+                return;
+            }
+            if (strlen($apiCode) === 6 && $item->privacy != 0) {
+                $supplier = \App\Model\User::query()->where("api_code", $apiCode)->first();
+                if ($supplier && (int)$supplier->id === (int)$item->user_id) {
+                    return;
+                }
+            }
+        }
+        throw new JSONException("无权访问该货源，请先通过对接码获取授权");
     }
 
 
@@ -139,6 +209,7 @@ class Supply extends Base
     public function item(): Response
     {
         $itemId = $this->request->get("id", Filter::INTEGER);
+        $this->assertSupplyAccess((int)$itemId); //可见性门禁：防止凭 id 直接读取隐藏货源
         return $this->json(data: $this->supply->getItem($this->getUser(), $itemId)->toArray());
     }
 
@@ -149,6 +220,14 @@ class Supply extends Base
     public function trade(): Response
     {
         $map = $this->request->post();
+
+        //可见性门禁：按 sku 定位货源，校验访问权限，防止越权进货隐藏货源
+        $sku = \App\Model\RepertoryItemSku::query()->find((int)($map['repertory_item_sku_id'] ?? 0), ["id", "repertory_item_id"]);
+        if (!$sku) {
+            throw new JSONException("商品不存在");
+        }
+        $this->assertSupplyAccess((int)$sku->repertory_item_id);
+
         $trade = new Trade($this->getUser()->id, (int)$map['repertory_item_sku_id'], (int)$map['quantity']);
         $trade->setTradeNo(Str::generateTradeNo());
         $trade->setMainTradeNo($trade->tradeNo);
@@ -169,6 +248,10 @@ class Supply extends Base
         $data = (array)$this->request->post("data");
         $categoryId = (int)$this->request->post("category_id");
         $markupId = (int)$this->request->post("markup_id");
+        //可见性门禁：先逐个校验访问权限，防止越权导入隐藏货源
+        foreach ($data as $id) {
+            $this->assertSupplyAccess((int)$id);
+        }
         foreach ($data as $id) {
             $this->item->loadRepertoryItem($categoryId, (int)$id, $markupId, $this->getUser());
         }

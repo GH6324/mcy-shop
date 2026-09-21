@@ -29,6 +29,16 @@ class Save
 
 
     /**
+     * 归属/作用域约束条件（列 => 值）。
+     * 设置后，按 id 定位待修改记录时会附加这些 WHERE 条件；
+     * 若客户端提供了 id 但在约束下查不到记录，则拒绝操作（不再静默新增），
+     * 用于杜绝“凭自增 id 跨租户接管他人记录”的越权。
+     * @var array
+     */
+    public array $where = [];
+
+
+    /**
      * 中间表
      * @var array
      */
@@ -161,6 +171,17 @@ class Save
             return;
         }
         $this->forceMap[$name] = $value;
+    }
+
+    /**
+     * 追加归属/作用域约束（用于按 id 定位记录时的 WHERE 过滤）。
+     * @param string $column
+     * @param mixed $value
+     * @return void
+     */
+    public function addWhere(string $column, mixed $value): void
+    {
+        $this->where[] = [$column, $value];
     }
 
     /**

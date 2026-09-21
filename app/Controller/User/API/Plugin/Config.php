@@ -82,6 +82,7 @@ class Config extends Base
         \Kernel\Plugin\Plugin::inst()->instantHook($plugin, $this->getUserPath(), Point::APP_SAVE_HANDLE_CFG_BEFORE, $map);
         $save->addMap("config", $map);
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：只能修改自己的插件配置（防跨租户接管支付/发货密钥）
         try {
             $this->query->save($save);
             \Kernel\Plugin\Plugin::inst()->instantHook($plugin, $this->getUserPath(), Point::APP_SAVE_HANDLE_CFG_AFTER, $map);

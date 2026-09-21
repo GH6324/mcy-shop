@@ -51,9 +51,11 @@ interface Order
 
     /**
      * @param string $tradeNo
+     * @param User|null $customer
+     * @param string $clientId
      * @return bool
      */
-    public function cancel(string $tradeNo): bool;
+    public function cancel(string $tradeNo, ?User $customer, string $clientId): bool;
 
     /**
      * @param User|null $customer

@@ -43,7 +43,8 @@ return [
         Constant::OPTION_TASK_WORKER_NUM => 1,
         Constant::OPTION_DOCUMENT_ROOT => BASE_PATH,
         Constant::OPTION_STATIC_HANDLER_LOCATIONS => array_merge(['/assets', '/favicon.ico'], Assets::inst()->list()),
-        Constant::OPTION_ENABLE_STATIC_HANDLER => true,
+        //Swoole 内置静态处理器无法防御 %2e%2e/%2f 编码目录穿越，改由 Kernel\Server\CLI::tryServeStatic 安全接管
+        Constant::OPTION_ENABLE_STATIC_HANDLER => false,
         Constant::OPTION_TASK_ENABLE_COROUTINE => true,
         Constant::OPTION_ENABLE_COROUTINE => true,
         Constant::OPTION_PID_FILE => BASE_PATH . '/runtime/pid',

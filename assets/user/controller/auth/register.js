@@ -20,7 +20,7 @@
 
         util.post("/register", map, res => {
             message.success("注册成功，正在登录..");
-            window.location.href = util.getParam("goto") !== null ? decodeURIComponent(util.getParam("goto")) : "/";
+            window.location.href = util.safeGoto(util.getParam("goto"));
         })
     });
 }();

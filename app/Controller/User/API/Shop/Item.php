@@ -120,6 +120,7 @@ class Item extends Base
         $save->disableAddable();
         $save->setMap($map);
         $save->addForceMap("user_id", $this->getUser()->id);
+        $save->addWhere("user_id", $this->getUser()->id); //归属校验：仅允许修改属于自己的记录
         try {
             $this->query->save($save);
             $item = isset($map['id']) ? Model::with([

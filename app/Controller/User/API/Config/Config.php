@@ -91,6 +91,16 @@ class Config extends Base
     {
         $to = $this->request->post("email");
 
+        //限制端口为标准 SMTP 端口、主机为合法主机名/IP，杜绝将测试功能用作任意端口探测(SSRF/端口扫描)
+        $port = (int)$this->request->post("port");
+        if (!in_array($port, [25, 465, 587, 2525], true)) {
+            throw new JSONException("SMTP 端口不合法");
+        }
+        $host = (string)$this->request->post("host");
+        if ($host === "" || strlen($host) > 255 || !preg_match('/^[A-Za-z0-9.\-_]+$/', $host)) {
+            throw new JSONException("SMTP 主机不合法");
+        }
+
         if (!$this->smtp->send(
             to: $to,
             title: "测试发信",

@@ -121,6 +121,7 @@ class Dict extends Base
      * @return Response
      * @throws RuntimeException
      */
+    #[Interceptor(class: [User::class, Supplier::class])]
     public function repertoryItemMarkupTemplate(): Response
     {
         $list = RepertoryItemMarkupTemplate::query()->where("user_id", $this->getUser()->id)->get();
@@ -206,6 +207,7 @@ class Dict extends Base
      * @return Response
      * @throws RuntimeException
      */
+    #[Interceptor(class: [User::class, Group::class])]
     public function pluginConfig(string $plugin, string $handle): Response
     {
         $config = PluginConfig::where("plugin", $plugin)->where("handle", $handle)->where("user_id", $this->getUser()->id)->get(["id", "name"])->toArray();

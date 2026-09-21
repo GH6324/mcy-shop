@@ -18,6 +18,95 @@ class Image implements \App\Service\Common\Image
     private \App\Service\Common\Upload $upload;
 
     /**
+     * 远程请求安全选项：限制协议、限制重定向次数并逐跳校验目标，防止通过 3xx 跳转绕过 SSRF 防护。
+     * @return array
+     */
+    private function safeHttpOptions(): array
+    {
+        return [
+            "timeout" => 15,
+            "allow_redirects" => [
+                "max" => 3,
+                "strict" => true,
+                "referer" => false,
+                "protocols" => ["http", "https"],
+                "on_redirect" => function ($request, $response, $uri) {
+                    $this->assertSafeRemoteUrl((string)$uri);
+                },
+            ],
+        ];
+    }
+
+    /**
+     * SSRF 防护：校验远程 URL 仅为 http(s)，且解析出的所有 IP 均为公网地址，
+     * 拒绝指向环回/私网/保留/链路本地/CGNAT 的地址，杜绝借“远程图片下载”探测或攻击内网。
+     * @param string $url
+     * @return void
+     * @throws ServiceException
+     */
+    private function assertSafeRemoteUrl(string $url): void
+    {
+        $parts = parse_url($url);
+        if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
+            throw new ServiceException("非法的图片地址");
+        }
+        if (!in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+            throw new ServiceException("图片地址协议不被允许");
+        }
+
+        $host = trim($parts['host'], "[]"); //去除 IPv6 方括号
+        $ips = [];
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips[] = $host;
+        } else {
+            $v4 = @gethostbynamel($host);
+            if (is_array($v4)) {
+                $ips = array_merge($ips, $v4);
+            }
+            $recs = @dns_get_record($host, DNS_AAAA);
+            if (is_array($recs)) {
+                foreach ($recs as $r) {
+                    if (!empty($r['ipv6'])) {
+                        $ips[] = $r['ipv6'];
+                    }
+                }
+            }
+        }
+
+        if (empty($ips)) {
+            throw new ServiceException("无法解析图片地址主机，已拒绝");
+        }
+
+        foreach ($ips as $ip) {
+            if (!$this->isPublicIp($ip)) {
+                throw new ServiceException("图片地址指向内网/保留地址，已拒绝(SSRF)");
+            }
+        }
+    }
+
+    /**
+     * @param string $ip
+     * @return bool
+     */
+    private function isPublicIp(string $ip): bool
+    {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return false;
+        }
+        //额外拦截 CGNAT 100.64.0.0/10
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $long = ip2long($ip);
+            if ($long === false) {
+                return false;
+            }
+            if (($long & 0xffc00000) === (ip2long("100.64.0.0") & 0xffc00000)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * @param string $imagePath
      * @param int $newHeight
      * @param string $basePath
@@ -152,7 +241,8 @@ class Image implements \App\Service\Common\Image
      */
     public function isRealImageFromURL($url): bool
     {
-        $response = Http::make()->head($url);
+        $this->assertSafeRemoteUrl((string)$url);
+        $response = Http::make()->head($url, $this->safeHttpOptions());
         $mimeType = $response->getHeaderLine('Content-Type');
         $validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (in_array($mimeType, $validImageTypes)) {
@@ -171,6 +261,7 @@ class Image implements \App\Service\Common\Image
      */
     public function downloadRemoteImage(string $url, bool $isCreateThumbnail = true, ?int $userId = null): array
     {
+        $this->assertSafeRemoteUrl($url);
         $extension = $this->getImageExtensionFromURL($url);
 
         if (!in_array($extension, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
@@ -188,9 +279,7 @@ class Image implements \App\Service\Common\Image
         if (!is_dir($dir)) {
             mkdir($dir, 0777, true);
         }
-        Http::make()->get($url, [
-            "sink" => BASE_PATH . $unique
-        ]);
+        Http::make()->get($url, array_merge(["sink" => BASE_PATH . $unique], $this->safeHttpOptions()));
         if (!is_file(BASE_PATH . $unique)) {
             throw new ServiceException("图片下载失败：$url");
         }

@@ -38,7 +38,10 @@ class Response implements \Kernel\Context\Interface\Response
      */
     public function withCookie(string $key, string $value, int $expire): static
     {
-        $this->serverResponse->setCookie($key, $value, time() + $expire, "/");
+        //默认启用 HttpOnly + SameSite=Lax：令牌/会话 Cookie 无法被 JS 读取（缓解 XSS 窃取），
+        //且不会随 <img>/跨站子请求发送（缓解 GET 登出等 CSRF）。
+        //Secure 未强制开启以兼容 HTTP 部署；生产环境使用 HTTPS 时应在反向代理层追加 Secure。
+        $this->serverResponse->setCookie($key, $value, time() + $expire, "/", "", false, true, "Lax");
         return $this;
     }
 

@@ -129,7 +129,7 @@ class Http implements \App\Service\Store\Http
                 $headers["Token"] = "{$authentication->id}@{$authentication->key}@" . $store->id . "@" . ($authentication->substation ? "substation" : "main");
             }
             $response = $this->httpClient->post($this->getBaseUrl() . $url, [
-                "verify" => false,
+                "verify" => \Kernel\Util\Http::caBundle(),
                 "timeout" => 10,
                 "body" => $body,
                 "headers" => $headers
@@ -199,7 +199,7 @@ class Http implements \App\Service\Store\Http
             }
 
             $options = [
-                "verify" => false,
+                "verify" => \Kernel\Util\Http::caBundle(),
                 "sink" => $path,
                 "headers" => $headers
             ];
@@ -239,7 +239,7 @@ class Http implements \App\Service\Store\Http
 
         try {
             $response = $this->httpClient->request("POST", $this->getBaseUrl() . "/user/upload?mime={$mime}", [
-                "verify" => false,
+                "verify" => \Kernel\Util\Http::caBundle(),
                 "multipart" => [
                     [
                         "name" => "file",

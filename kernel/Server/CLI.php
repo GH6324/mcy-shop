@@ -64,6 +64,12 @@ class CLI
      */
     private int $workerId = 0;
 
+    /**
+     * 静态资源根目录白名单（相对 BASE_PATH），懒加载缓存
+     * @var array|null
+     */
+    private ?array $staticLocations = null;
+
     public function __construct()
     {
         $this->config = Config::get("cli-server");
@@ -195,6 +201,11 @@ class CLI
     public function httpRequest(\Swoole\Http\Request $request, \Swoole\Http\Response $response): void
     {
         try {
+            //由本进程接管静态资源，替代 Swoole 内置静态处理器（内置处理器无法防御 %2e%2e/%2f 编码目录穿越）
+            if ($this->tryServeStatic($request, $response)) {
+                return;
+            }
+
             if (trim((string)$request->server['request_uri'], "/") != "wait/state") {
                 //记录最后一次访问时间
                 Cache::inst()->set(Swoole\Constant::CLI_LAST_REQUEST_TIME, time());
@@ -354,5 +365,114 @@ class CLI
         if (isset($json['type']) && $json['type'] == "ws_push") {
             \Kernel\Plugin\WebSocket::instance()->pipeMessage($server, $json['data'] ?? []);
         }
+    }
+
+    /**
+     * 安全的静态资源服务：对规范化后的真实路径做严格的目录归属校验，
+     * 杜绝 ../、%2e%2e、%2f 等（编码）目录穿越读取站点根内任意文件（如 config/database.php）。
+     *
+     * @param \Swoole\Http\Request $request
+     * @param \Swoole\Http\Response $response
+     * @return bool 命中静态文件并已发送则返回 true；否则 false（交由正常路由处理）
+     */
+    private function tryServeStatic(\Swoole\Http\Request $request, \Swoole\Http\Response $response): bool
+    {
+        $method = strtoupper((string)($request->server['request_method'] ?? 'GET'));
+        if ($method !== 'GET' && $method !== 'HEAD') {
+            return false;
+        }
+
+        $path = (string)parse_url((string)($request->server['request_uri'] ?? ''), PHP_URL_PATH);
+        if ($path === '' || $path === '/') {
+            return false;
+        }
+
+        //解码（覆盖 %2e %2f 等编码），并拒绝空字节
+        $path = rawurldecode($path);
+        if (str_contains($path, "\0")) {
+            return false;
+        }
+
+        if ($this->staticLocations === null) {
+            $this->staticLocations = array_merge(['/assets', '/favicon.ico'], \Kernel\Plugin\Assets::inst()->list());
+        }
+
+        $matched = null;
+        foreach ($this->staticLocations as $loc) {
+            $loc = '/' . trim((string)$loc, '/');
+            if ($loc === '/') {
+                continue;
+            }
+            if ($path === $loc || str_starts_with($path, $loc . '/')) {
+                $matched = $loc;
+                break;
+            }
+        }
+        if ($matched === null) {
+            return false;
+        }
+
+        $real = realpath(BASE_PATH . $path);
+        if ($real === false || !is_file($real)) {
+            return false;
+        }
+
+        //真实路径必须严格位于被匹配的静态目录内（或就是该文件本身），否则判定为穿越攻击
+        $base = realpath(BASE_PATH . $matched);
+        if ($base === false) {
+            return false;
+        }
+        if ($real !== $base && !str_starts_with($real, $base . DIRECTORY_SEPARATOR)) {
+            return false;
+        }
+
+        $mtime = (int)@filemtime($real);
+        $response->header("Content-Type", $this->staticMimeType($real));
+        $response->header("X-Content-Type-Options", "nosniff");
+        $response->header("Cache-Control", "no-cache");
+        if ($mtime > 0) {
+            $response->header("Last-Modified", gmdate("D, d M Y H:i:s", $mtime) . " GMT");
+            $ims = $request->header['if-modified-since'] ?? null;
+            if ($ims !== null && @strtotime((string)$ims) >= $mtime) {
+                $response->status(304);
+                $response->end();
+                return true;
+            }
+        }
+        if ($method === 'HEAD') {
+            $response->header("Content-Length", (string)filesize($real));
+            $response->end();
+            return true;
+        }
+        $response->sendfile($real);
+        return true;
+    }
+
+    /**
+     * @param string $file
+     * @return string
+     */
+    private function staticMimeType(string $file): string
+    {
+        static $map = [
+            'css' => 'text/css', 'js' => 'application/javascript', 'mjs' => 'application/javascript',
+            'json' => 'application/json', 'map' => 'application/json', 'xml' => 'application/xml',
+            'html' => 'text/html', 'htm' => 'text/html', 'txt' => 'text/plain',
+            'svg' => 'image/svg+xml', 'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif', 'webp' => 'image/webp', 'ico' => 'image/x-icon', 'bmp' => 'image/bmp',
+            'avif' => 'image/avif', 'apng' => 'image/apng',
+            'woff' => 'font/woff', 'woff2' => 'font/woff2', 'ttf' => 'font/ttf', 'otf' => 'font/otf',
+            'eot' => 'application/vnd.ms-fontobject',
+            'mp4' => 'video/mp4', 'webm' => 'video/webm', 'ogv' => 'video/ogg',
+            'mp3' => 'audio/mpeg', 'wav' => 'audio/wav', 'ogg' => 'audio/ogg',
+            'pdf' => 'application/pdf', 'wasm' => 'application/wasm', 'zip' => 'application/zip',
+            'apk' => 'application/vnd.android.package-archive',
+        ];
+        $ext = strtolower((string)pathinfo($file, PATHINFO_EXTENSION));
+        $type = $map[$ext] ?? 'application/octet-stream';
+        if (in_array($ext, ['css', 'js', 'mjs', 'json', 'map', 'xml', 'html', 'htm', 'txt', 'svg'], true)) {
+            $type .= '; charset=utf-8';
+        }
+        return $type;
     }
 }

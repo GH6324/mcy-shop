@@ -14,6 +14,7 @@ use App\Service\User\Lifetime;
 use App\Service\User\Log;
 use App\Service\User\LoginLog;
 use Firebase\JWT\JWT;
+use Kernel\Cache\Cache;
 use Kernel\Annotation\Inject;
 use Kernel\Context\App;
 use Kernel\Context\Interface\Request;
@@ -29,6 +30,16 @@ use Kernel\Util\Str;
 
 class Auth implements \App\Service\User\Auth
 {
+
+    /**
+     * 单个来源 IP 允许的最大连续登录失败次数
+     */
+    private const LOGIN_MAX_FAIL = 10;
+
+    /**
+     * 登录失败锁定时长（秒）
+     */
+    private const LOGIN_LOCK_SECONDS = 600;
 
     #[Inject]
     private Code $code;
@@ -189,24 +200,54 @@ class Auth implements \App\Service\User\Auth
     {
 
         Plugin::instance()->hook(App::env(), Point::SERVICE_AUTH_LOGIN_BEFORE, PGI::HOOK_TYPE_PAGE, $map, $ip, $ua);
+
+        //登录失败限流：按来源 IP（IP 已不可伪造，见 Request::resolveClientIp）计数并锁定，
+        //抵御撞库/暴力破解。达到上限即在锁定窗口内拒绝一切尝试。
+        $lockKey = "login_fail_" . md5((string)$ip);
+        $fail = Cache::inst()->get($lockKey);
+        $fail = is_array($fail) ? $fail : ["count" => 0, "time" => time()];
+        if ((int)($fail['time'] ?? 0) + self::LOGIN_LOCK_SECONDS <= time()) {
+            $fail = ["count" => 0, "time" => time()];
+        }
+        if ((int)($fail['count'] ?? 0) >= self::LOGIN_MAX_FAIL) {
+            throw new JSONException("登录失败次数过多，请稍后再试");
+        }
+
         /**
          * @var User $user
          */
         $user = User::query()->where("username", $map['username'])->first() ?? User::query()->where("email", $map['username'])->first();
-        if (!$user) {
-            throw new JSONException("用户不存在");
-        }
 
-        if ($user->password != Str::generatePassword(trim((string)$map['password']), $user->salt)) {
-            throw new JSONException("密码错误");
+        //统一失败提示，避免区分“用户不存在/密码错误”造成用户枚举
+        if (!$user || $user->password != Str::generatePassword(trim((string)$map['password']), $user->salt)) {
+            $this->bumpLoginFail($lockKey, $fail);
+            throw new JSONException("用户名或密码错误");
         }
 
         if ($user->status != 1) {
             throw new JSONException("You have been banned");
         }
 
+        //登录成功，清除失败计数
+        Cache::inst()->del($lockKey);
+
         Plugin::instance()->hook(App::env(), Point::SERVICE_AUTH_LOGIN_SUCCESS, PGI::HOOK_TYPE_PAGE, $user);
         return $this->setLoginSuccess($user);
+    }
+
+    /**
+     * 累加某来源 IP 的登录失败计数
+     * @param string $lockKey
+     * @param array $fail
+     * @return void
+     */
+    private function bumpLoginFail(string $lockKey, array $fail): void
+    {
+        $fail['count'] = (int)($fail['count'] ?? 0) + 1;
+        if (!isset($fail['time'])) {
+            $fail['time'] = time();
+        }
+        Cache::inst()->set($lockKey, $fail);
     }
 
     /**

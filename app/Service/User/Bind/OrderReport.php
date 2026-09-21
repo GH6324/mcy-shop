@@ -60,8 +60,6 @@ class OrderReport implements \App\Service\User\OrderReport
                 throw new ServiceException("订单不存在");
             }
 
-            var_dump($order->expect , $orderItem?->sku?->repertoryItemSku?->repertoryItem?->refund_mode);
-
             if ($order->expect != 0 && $orderItem?->sku?->repertoryItemSku?->repertoryItem?->refund_mode == 0) {
                 throw new ServiceException("此商品不支持该维权方式");
             }
